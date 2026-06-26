@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PPC Weekly Importer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#0f1117;color:#c9d1d9;min-height:100vh;font-size:13px}
+.wrap{max-width:900px;margin:0 auto;padding:40px 32px 80px}
+h1{font-size:26px;font-weight:800;color:#fff;margin-bottom:4px}
+.subtitle{font-size:13px;color:rgba(255,255,255,.35);margin-bottom:36px}
+.sec{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:10px;margin-top:28px}
+.panel{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:20px 22px;margin-bottom:16px}
+label{display:block;font-size:11px;font-weight:600;color:rgba(255,255,255,.4);margin-bottom:5px}
+select,input[type=text]{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-family:'Inter',sans-serif;font-size:13px;padding:9px 12px;outline:none;transition:border-color .15s}
+select:focus,input:focus{border-color:#58a6ff}
+select option{background:#0d1117}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{margin-bottom:14px}.field:last-child{margin-bottom:0}
+.acc-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.acc-item{display:flex;align-items:center;gap:8px;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px 12px}
+.acc-num{font-size:10px;font-weight:700;color:rgba(255,255,255,.3);width:20px;flex-shrink:0;text-align:right}
+.acc-inp{flex:1;background:transparent;border:none;color:#e6edf3;font-family:'Inter',sans-serif;font-size:13px;padding:0;outline:none}
+.acc-inp::placeholder{color:rgba(255,255,255,.2)}
+.acc-del{background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:18px;line-height:1;transition:color .15s;padding:0 2px}
+.acc-del:hover{color:#f85149}
+.btn-add{background:none;border:1px dashed #30363d;border-radius:6px;color:rgba(255,255,255,.35);font-family:'Inter',sans-serif;font-size:12px;cursor:pointer;padding:8px 14px;width:100%;transition:all .15s}
+.btn-add:hover{border-color:#58a6ff;color:#58a6ff}
+.upload-zone{border:1.5px dashed #30363d;border-radius:8px;padding:18px;text-align:center;cursor:pointer;transition:all .15s;background:#0d1117;position:relative}
+.upload-zone:hover{border-color:#58a6ff;background:#161b22}
+.upload-zone.ok{border-color:#3fb950;background:rgba(63,185,80,.05)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:20px;margin-bottom:5px}
+.upload-lbl{font-size:12px;font-weight:600;color:rgba(255,255,255,.5)}
+.upload-hint{font-size:10px;color:rgba(255,255,255,.25);margin-top:3px}
+.upload-fn{font-size:11px;color:#3fb950;margin-top:5px;font-weight:600}
+.btn{display:flex;align-items:center;justify-content:center;background:#238636;color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;border:none;border-radius:6px;padding:10px 24px;cursor:pointer;transition:background .15s;width:100%;margin-top:4px}
+.btn:hover{background:#2ea043}
+.btn:disabled{background:#21262d;color:rgba(255,255,255,.3);cursor:not-allowed}
+.prog{display:none;margin-top:12px}
+.prog-bar{height:3px;background:#21262d;border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:#238636;width:0%;transition:width .3s}
+.prog-lbl{font-size:10px;color:rgba(255,255,255,.3);margin-top:5px;text-align:center}
+.alert{background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);border-radius:6px;padding:10px 14px;font-size:12px;color:#f85149;margin-top:10px;display:none}
+.results{margin-top:32px;display:none}
+.sbar{display:flex;background:#161b22;border:1px solid #30363d;border-radius:8px;overflow:hidden;margin-bottom:16px}
+.sbar-item{flex:1;padding:12px 16px;border-right:1px solid #30363d}
+.sbar-item:last-child{border-right:none}
+.sbar-lbl{font-size:10px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:3px}
+.sbar-val{font-size:14px;font-weight:700;color:#fff}
+.kgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.kpi{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 16px}
+.kpi-lbl{font-size:10px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:4px}
+.kpi-val{font-size:20px;font-weight:800;color:#e6edf3;font-variant-numeric:tabular-nums;line-height:1}
+.kpi-sub{font-size:10px;color:rgba(255,255,255,.25);margin-top:3px}
+.kpi.g .kpi-val{color:#3fb950}.kpi.r .kpi-val{color:#f85149}.kpi.y .kpi-val{color:#d29922}
+.twrap{background:#161b22;border:1px solid #30363d;border-radius:8px;overflow:hidden;margin-bottom:16px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+thead th{font-size:10px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:rgba(255,255,255,.35);padding:9px 14px;text-align:left;background:#0d1117;border-bottom:1px solid #30363d}
+tbody td{font-size:12px;color:rgba(255,255,255,.7);padding:9px 14px;border-bottom:1px solid #21262d}
+tbody tr:last-child td{border-bottom:none;font-weight:700;color:#fff}
+tbody tr:hover td{background:rgba(255,255,255,.02)}
+.tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px}
+.tag-g{background:rgba(63,185,80,.15);color:#3fb950}
+.tag-r{background:rgba(248,81,73,.15);color:#f85149}
+.tag-n{background:rgba(255,255,255,.06);color:rgba(255,255,255,.4)}
+.copy-box{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px 16px}
+.copy-lbl{font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:8px}
+.copy-val{font-size:11px;color:rgba(255,255,255,.5);word-break:break-all;line-height:1.7;font-family:monospace}
+.copy-act{display:flex;align-items:center;gap:10px;margin-top:10px}
+.btn-copy{background:#21262d;border:1px solid #30363d;color:rgba(255,255,255,.7);font-family:'Inter',sans-serif;font-size:11px;font-weight:600;border-radius:5px;padding:6px 14px;cursor:pointer;transition:all .15s}
+.btn-copy:hover{background:#30363d;color:#fff}
+.copy-ok{font-size:11px;color:#3fb950;display:none}
+.col-hint{font-size:10px;color:rgba(255,255,255,.2);margin-top:8px;line-height:1.6}
+.tgt-row{display:grid;grid-template-columns:1fr 120px 120px;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid #21262d}
+.tgt-row:last-child{border-bottom:none}
+.tgt-name{font-size:12px;font-weight:600;color:#e6edf3}
+.tgt-inp-wrap{display:flex;align-items:center;gap:6px}
+.tgt-inp-wrap label{margin:0;white-space:nowrap;font-size:10px;color:rgba(255,255,255,.3)}
+.tgt-inp{width:70px;background:#0d1117;border:1px solid #30363d;border-radius:5px;color:#e6edf3;font-family:'Inter',sans-serif;font-size:12px;padding:5px 8px;outline:none;text-align:center}
+.tgt-inp:focus{border-color:#58a6ff}
+.divider{height:1px;background:#21262d;margin:24px 0}
+.hnote{font-size:11px;color:rgba(255,255,255,.25);font-style:italic;margin-top:8px}
+.sec-title{font-size:11px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:.6px;text-transform:uppercase;margin-bottom:10px}
+/* Storage status badge */
+.ls-status{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px;margin-left:10px;vertical-align:middle}
+.ls-ok{background:rgba(63,185,80,.12);color:#3fb950;border:1px solid rgba(63,185,80,.2)}
+.ls-err{background:rgba(248,81,73,.12);color:#f85149;border:1px solid rgba(248,81,73,.2)}
+/* History overview */
+.hov-wrap{margin-bottom:8px}
+.hov-acc{margin-bottom:14px}
+.hov-acc-name{font-size:12px;font-weight:700;color:#e6edf3;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.hov-table-wrap{background:#161b22;border:1px solid #30363d;border-radius:8px;overflow:hidden;overflow-x:auto}
+.hov-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.hov-table thead th{font-size:10px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:rgba(255,255,255,.3);padding:7px 12px;text-align:left;background:#0d1117;border-bottom:1px solid #30363d;white-space:nowrap}
+.hov-table tbody td{font-size:12px;color:rgba(255,255,255,.7);padding:7px 12px;border-bottom:1px solid #21262d;white-space:nowrap}
+.hov-table tbody tr:last-child td{border-bottom:none}
+.hov-table tbody tr:hover td{background:rgba(255,255,255,.02)}
+.hov-del{background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:13px;padding:0 4px;transition:color .15s}
+.hov-del:hover{color:#f85149}
+.hov-empty{font-size:11px;color:rgba(255,255,255,.25);font-style:italic;padding:10px 0}
+.hov-tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px}
+.hov-g{background:rgba(63,185,80,.15);color:#3fb950}
+.hov-r{background:rgba(248,81,73,.15);color:#f85149}
+.hov-y{background:rgba(210,153,34,.15);color:#d29922}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>PPC Weekly Importer <span id="lsStatusBadge"></span></h1>
+<p class="subtitle">Upload Bulk + Business Report &rarr; extract metrics &rarr; paste into DATA sheet</p>
+
+<div class="sec">History overview <span id="hovCount" style="font-size:10px;color:rgba(255,255,255,.25);font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+<div class="panel hov-wrap" id="hovPanel">
+  <div id="hovContent"></div>
+</div>
+
+<div class="sec">Account Names</div>
+<div class="panel">
+  <div class="acc-list" id="accList"></div>
+  <button class="btn-add" id="btnAdd">+ Add account</button>
+</div>
+
+<div class="sec">Targets per account</div>
+<div class="panel">
+  <div style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:12px">Set once per account. Used for status coloring and KPI evaluation.</div>
+  <div id="targetList"></div>
+</div>
+
+<div class="sec">Configuration</div>
+<div class="panel">
+  <div class="row2">
+    <div class="field">
+      <label>Account</label>
+      <select id="accSel"><option value="">-- Select account --</option></select>
+    </div>
+    <div class="field">
+      <label>Week (ISO)</label>
+      <input type="text" id="weekInp" placeholder="e.g. 2026-W26">
+    </div>
+  </div>
+</div>
+
+<div class="sec">Files</div>
+<div class="panel">
+  <div class="row2">
+    <div>
+      <label>Bulk Export (.xlsx)</label>
+      <div class="upload-zone" id="bulkZone">
+        <input type="file" id="bulkFile" accept=".xlsx">
+        <div class="upload-icon">&#128202;</div>
+        <div class="upload-lbl">Click or drag &amp; drop</div>
+        <div class="upload-hint">Amazon Ads Bulk Operations</div>
+        <div class="upload-fn" id="bulkName"></div>
+      </div>
+    </div>
+    <div>
+      <label>Business Report (.csv)</label>
+      <div class="upload-zone" id="brZone">
+        <input type="file" id="brFile" accept=".csv">
+        <div class="upload-icon">&#128200;</div>
+        <div class="upload-lbl">Click or drag &amp; drop</div>
+        <div class="upload-hint">Business Report from Seller Central</div>
+        <div class="upload-fn" id="brName"></div>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:14px">
+    <label>Business Report Last Year (.csv) &mdash; optional, for YoY comparison</label>
+    <div class="upload-zone" id="brLyZone">
+      <input type="file" id="brLyFile" accept=".csv">
+      <div class="upload-icon">&#128197;</div>
+      <div class="upload-lbl">Click or drag &amp; drop</div>
+      <div class="upload-hint">Same week, last year &mdash; from Seller Central</div>
+      <div class="upload-fn" id="brLyName"></div>
+    </div>
+  </div>
+  <div class="prog" id="prog">
+    <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+    <div class="prog-lbl" id="progLbl">Processing...</div>
+  </div>
+  <div class="alert" id="alertBox"></div>
+  <button class="btn" id="processBtn" disabled>Extract data</button>
+</div>
+
+<div class="results" id="results">
+  <div class="sec">Results</div>
+  <div class="sbar">
+    <div class="sbar-item"><div class="sbar-lbl">Account</div><div class="sbar-val" id="rAcc">-</div></div>
+    <div class="sbar-item"><div class="sbar-lbl">Week</div><div class="sbar-val" id="rWeek">-</div></div>
+    <div class="sbar-item"><div class="sbar-lbl">Status</div><div class="sbar-val" id="rStatus">-</div></div>
+    <div class="sbar-item"><div class="sbar-lbl">ACOS</div><div class="sbar-val" id="rAcos">-</div></div>
+    <div class="sbar-item"><div class="sbar-lbl">TACOS</div><div class="sbar-val" id="rTacos">-</div></div>
+  </div>
+  <div class="kgrid" id="kRow1"></div>
+  <div class="kgrid" id="kRow2"></div>
+  <div class="divider"></div>
+  <div class="sec-title">Campaign type breakdown</div>
+  <div class="twrap"><table><thead><tr><th>Type</th><th>Impressions</th><th>Clicks</th><th>Spend</th><th>PPC Sales</th><th>Orders</th><th>ACOS</th><th>CVR</th></tr></thead><tbody id="bdBody"></tbody></table></div>
+  <div id="wowSection" style="display:none">
+    <div class="sec-title">4-week trend</div>
+    <div class="twrap"><table><thead id="wowHead"></thead><tbody id="wowBody"></tbody></table></div>
+    <div class="hnote" id="hnote"></div>
+  </div>
+  <div id="yoySection" style="display:none">
+    <div class="sec-title">Year-over-year comparison</div>
+    <div class="twrap"><table><thead id="yoyHead"></thead><tbody id="yoyBody"></tbody></table></div>
+    <div class="hnote" id="yoynote"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="sec-title">Row ready to paste into DATA sheet</div>
+  <div class="copy-box">
+    <div class="copy-lbl">Tab-separated &mdash; paste directly into Google Sheets</div>
+    <div class="copy-val" id="copyVal">-</div>
+    <div class="copy-act">
+      <button class="btn-copy" id="btnCopy">Copy row</button>
+      <span class="copy-ok" id="copyOk">Copied!</span>
+    </div>
+    <div class="col-hint">Columns: Account | Week | Impressions | Clicks | Spend | PPC Sales | Total Sales | Orders | ACOS | TACOS | CVR | CTR | YoY Total Sales</div>
+  </div>
+</div>
+
+</div>
+<script>
+(function() {
+  // -- localStorage wrapper with error handling & diagnostics ----------------
+  var LS_OK = false;
+  var LS_TEST_KEY = '__ppc_ls_test__';
+  try {
+    localStorage.setItem(LS_TEST_KEY, '1');
+    if (localStorage.getItem(LS_TEST_KEY) === '1') {
+      localStorage.removeItem(LS_TEST_KEY);
+      LS_OK = true;
+    }
+  } catch(e) { LS_OK = false; }
+
+  // Show badge
+  var badge = document.getElementById('lsStatusBadge');
+  if (LS_OK) {
+    badge.className = 'ls-status ls-ok';
+    badge.textContent = '✓ Data saved locally';
+  } else {
+    badge.className = 'ls-status ls-err';
+    badge.textContent = '⚠ Storage blocked — data won\'t persist';
+  }
+
+  function lsGet(key) {
+    if (!LS_OK) return null;
+    try { return localStorage.getItem(key); } catch(e) { return null; }
+  }
+  function lsSet(key, val) {
+    if (!LS_OK) return;
+    try { localStorage.setItem(key, val); } catch(e) {
+      // quota exceeded or blocked mid-session
+      console.warn('localStorage write failed:', e);
+    }
+  }
+
+  // -- State ----------------------------------------------------------------
+  var accounts = [];
+  var bulkWB = null;
+  var brRows = null;
+  var brLyRows = null;
+
+  // -- Helpers ---------------------------------------------------------------
+  function fmt(n) { return Number(n).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function fmtN(n) { return Math.round(Number(n)).toLocaleString('de-DE'); }
+  function pct(n) { return (Number(n)*100).toFixed(1)+'%'; }
+
+  function cleanNum(v) {
+    if (v === null || v === undefined || v === '') return 0;
+    if (typeof v === 'number') return isNaN(v) ? 0 : v;
+    var s = String(v).replace(/[^0-9.,\-]/g, '');
+    if (s.indexOf(',') !== -1 && s.indexOf('.') !== -1) {
+      if (s.lastIndexOf('.') > s.lastIndexOf(',')) {
+        s = s.replace(/,/g, '');
+      } else {
+        s = s.replace(/\./g, '').replace(',', '.');
+      }
+    } else if (s.indexOf(',') !== -1) {
+      var parts = s.split(',');
+      if (parts[parts.length-1].length <= 2) {
+        s = s.replace(',', '.');
+      } else {
+        s = s.replace(/,/g, '');
+      }
+    }
+    var n = parseFloat(s);
+    return isNaN(n) ? 0 : n;
+  }
+
+  // -- Account management ----------------------------------------------------
+  function loadAccounts() {
+    var saved = lsGet('ppc_accounts_b');
+    if (saved) {
+      try { accounts = JSON.parse(saved); } catch(e) { accounts = []; }
+    }
+    // Only use defaults if nothing was ever saved
+    if (!accounts || accounts.length === 0) {
+      accounts = ['Account 1','Account 2','Account 3','Account 4','Account 5','Account 6'];
+      // Save immediately so defaults persist too
+      lsSet('ppc_accounts_b', JSON.stringify(accounts));
+    }
+    renderAccounts();
+    renderTargets();
+  }
+
+  // -- Targets ---------------------------------------------------------------
+  function targetsKey(acc) { return 'ppc_tgtb_' + acc.replace(/[^a-z0-9]/gi,'_'); }
+
+  function getTargets(acc) {
+    var saved = lsGet(targetsKey(acc));
+    if (saved) { try { return JSON.parse(saved); } catch(e) {} }
+    return {acos: 12, tacos: 5};
+  }
+
+  function saveTargets(acc, acos, tacos) {
+    lsSet(targetsKey(acc), JSON.stringify({acos:acos, tacos:tacos}));
+  }
+
+  function renderTargets() {
+    var list = document.getElementById('targetList');
+    if (!list) return;
+    list.innerHTML = '';
+    for (var i = 0; i < accounts.length; i++) {
+      (function(acc) {
+        var tgt = getTargets(acc);
+        var row = document.createElement('div');
+        row.className = 'tgt-row';
+
+        var nameEl = document.createElement('div');
+        nameEl.className = 'tgt-name';
+        nameEl.textContent = acc;
+
+        var acosWrap = document.createElement('div');
+        acosWrap.className = 'tgt-inp-wrap';
+        var acosLbl = document.createElement('label');
+        acosLbl.textContent = 'ACOS target';
+        var acosInp = document.createElement('input');
+        acosInp.className = 'tgt-inp';
+        acosInp.type = 'number';
+        acosInp.min = '1'; acosInp.max = '100'; acosInp.step = '0.5';
+        acosInp.value = tgt.acos;
+        var acosSuffix = document.createElement('span');
+        acosSuffix.style.cssText = 'font-size:11px;color:rgba(255,255,255,.3)';
+        acosSuffix.textContent = '%';
+        acosWrap.appendChild(acosLbl);
+        acosWrap.appendChild(acosInp);
+        acosWrap.appendChild(acosSuffix);
+
+        var tacosWrap = document.createElement('div');
+        tacosWrap.className = 'tgt-inp-wrap';
+        var tacosLbl = document.createElement('label');
+        tacosLbl.textContent = 'TACOS target';
+        var tacosInp = document.createElement('input');
+        tacosInp.className = 'tgt-inp';
+        tacosInp.type = 'number';
+        tacosInp.min = '1'; tacosInp.max = '100'; tacosInp.step = '0.5';
+        tacosInp.value = tgt.tacos;
+        var tacosSuffix = document.createElement('span');
+        tacosSuffix.style.cssText = 'font-size:11px;color:rgba(255,255,255,.3)';
+        tacosSuffix.textContent = '%';
+        tacosWrap.appendChild(tacosLbl);
+        tacosWrap.appendChild(tacosInp);
+        tacosWrap.appendChild(tacosSuffix);
+
+        function saveBoth() {
+          var a = parseFloat(acosInp.value) || 12;
+          var t = parseFloat(tacosInp.value) || 5;
+          saveTargets(acc, a, t);
+        }
+        acosInp.addEventListener('change', saveBoth);
+        tacosInp.addEventListener('change', saveBoth);
+
+        row.appendChild(nameEl);
+        row.appendChild(acosWrap);
+        row.appendChild(tacosWrap);
+        list.appendChild(row);
+      })(accounts[i]);
+    }
+  }
+
+  function saveAccounts() {
+    lsSet('ppc_accounts_b', JSON.stringify(accounts));
+    renderDropdown();
+    renderTargets();
+    renderHistoryOverview();
+  }
+
+  function renderAccounts() {
+    var list = document.getElementById('accList');
+    list.innerHTML = '';
+    for (var i = 0; i < accounts.length; i++) {
+      (function(idx) {
+        var item = document.createElement('div');
+        item.className = 'acc-item';
+
+        var num = document.createElement('span');
+        num.className = 'acc-num';
+        num.textContent = idx + 1;
+
+        var inp = document.createElement('input');
+        inp.className = 'acc-inp';
+        inp.type = 'text';
+        inp.value = accounts[idx];
+        inp.placeholder = 'Account name...';
+        inp.addEventListener('input', function() {
+          accounts[idx] = this.value;
+          saveAccounts();
+        });
+
+        var del = document.createElement('button');
+        del.className = 'acc-del';
+        del.textContent = 'x';
+        del.addEventListener('click', function() {
+          accounts.splice(idx, 1);
+          saveAccounts();
+          renderAccounts();
+        });
+
+        item.appendChild(num);
+        item.appendChild(inp);
+        item.appendChild(del);
+        list.appendChild(item);
+      })(i);
+    }
+    renderDropdown();
+  }
+
+  function renderDropdown() {
+    var sel = document.getElementById('accSel');
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">-- Select account --</option>';
+    for (var i = 0; i < accounts.length; i++) {
+      var opt = document.createElement('option');
+      opt.value = accounts[i];
+      opt.textContent = accounts[i];
+      if (accounts[i] === cur) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    checkReady();
+  }
+
+  document.getElementById('btnAdd').addEventListener('click', function() {
+    accounts.push('Account ' + (accounts.length + 1));
+    saveAccounts();
+    renderAccounts();
+  });
+
+  // -- History ---------------------------------------------------------------
+  function historyKey(acc) { return 'ppc_hb_' + acc.replace(/[^a-z0-9]/gi,'_'); }
+
+  function getHistory(acc) {
+    var saved = lsGet(historyKey(acc));
+    if (!saved) return [];
+    try { return JSON.parse(saved); } catch(e) { return []; }
+  }
+
+  function saveToHistory(acc, data) {
+    var hist = getHistory(acc).filter(function(h) { return h.week !== data.week; });
+    hist.push(data);
+    hist.sort(function(a,b) { return a.week.localeCompare(b.week); });
+    if (hist.length > 52) hist = hist.slice(-52);
+    lsSet(historyKey(acc), JSON.stringify(hist));
+  }
+
+  // -- File handlers ---------------------------------------------------------
+  document.getElementById('bulkFile').addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    document.getElementById('bulkName').textContent = file.name;
+    document.getElementById('bulkZone').classList.add('ok');
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      bulkWB = XLSX.read(ev.target.result, {type:'array'});
+      checkReady();
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  document.getElementById('brFile').addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    document.getElementById('brName').textContent = file.name;
+    document.getElementById('brZone').classList.add('ok');
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      brRows = parseCSV(ev.target.result);
+      checkReady();
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById('brLyFile').addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    document.getElementById('brLyName').textContent = file.name;
+    document.getElementById('brLyZone').classList.add('ok');
+    var reader2 = new FileReader();
+    reader2.onload = function(ev) { brLyRows = parseCSV(ev.target.result); };
+    reader2.readAsText(file);
+  });
+
+  function checkReady() {
+    var ok = bulkWB && brRows && document.getElementById('accSel').value && document.getElementById('weekInp').value;
+    document.getElementById('processBtn').disabled = !ok;
+  }
+  document.getElementById('accSel').addEventListener('change', checkReady);
+  document.getElementById('weekInp').addEventListener('input', checkReady);
+
+  // -- CSV parser ------------------------------------------------------------
+  function parseCSV(text) {
+    var lines = text.trim().split('\n');
+    var headers = splitLine(lines[0]);
+    var rows = [];
+    for (var i = 1; i < lines.length; i++) {
+      var cols = splitLine(lines[i]);
+      if (cols.length < 2) continue;
+      var row = {};
+      for (var j = 0; j < headers.length; j++) {
+        row[headers[j]] = (cols[j] || '').trim().replace(/^"|"$/g,'');
+      }
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  function splitLine(line) {
+    var res = [], cur = '', inQ = false;
+    for (var i = 0; i < line.length; i++) {
+      var ch = line[i];
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { res.push(cur); cur = ''; }
+      else { cur += ch; }
+    }
+    res.push(cur);
+    return res.map(function(s) { return s.trim().replace(/^"|"$/g,''); });
+  }
+
+  // -- Process ---------------------------------------------------------------
+  document.getElementById('processBtn').addEventListener('click', function() {
+    showProg(10,'Reading Bulk...'); hideAlert();
+    document.getElementById('results').style.display = 'none';
+
+    setTimeout(function() {
+      try {
+        var sheetDefs = [
+          {name:'Sponsored Products Campaigns', label:'SP'},
+          {name:'Sponsored Brands campaigns',   label:'SB'},
+          {name:'Sponsored Display campaigns',  label:'SD'},
+        ];
+
+        var totImp=0,totClk=0,totSpd=0,totSal=0,totOrd=0;
+        var breakdown = [];
+
+        for (var si = 0; si < sheetDefs.length; si++) {
+          var sd = sheetDefs[si];
+          if (bulkWB.SheetNames.indexOf(sd.name) === -1) continue;
+          showProg(20+si*15,'Reading '+sd.label+'...');
+          var rows = XLSX.utils.sheet_to_json(bulkWB.Sheets[sd.name], {raw:true,defval:''});
+          var imp=0,clk=0,spd=0,sal=0,ord=0;
+          for (var ri = 0; ri < rows.length; ri++) {
+            var r = rows[ri];
+            if (String(r['Entity']||'').trim() !== 'Campaign') continue;
+            imp+=cleanNum(r['Impressions']); clk+=cleanNum(r['Clicks']);
+            spd+=cleanNum(r['Spend']); sal+=cleanNum(r['Sales']); ord+=cleanNum(r['Orders']);
+          }
+          breakdown.push({label:sd.label,imp:imp,clk:clk,spd:spd,sal:sal,ord:ord});
+          totImp+=imp; totClk+=clk; totSpd+=spd; totSal+=sal; totOrd+=ord;
+        }
+
+        showProg(70,'Reading Business Report...');
+        var totalSales=0, totalSessions=0, totalUnits=0, totalB2BSales=0;
+        for (var bi = 0; bi < brRows.length; bi++) {
+          var row = brRows[bi];
+          var keys = Object.keys(row);
+          for (var ki = 0; ki < keys.length; ki++) {
+            var k = keys[ki];
+            if (k.indexOf('Ordered Product Sales') !== -1 && k.indexOf('B2B') === -1) totalSales += cleanNum(row[k]);
+            if (k.indexOf('Ordered product sales') !== -1 && k.indexOf('B2B') !== -1) totalB2BSales += cleanNum(row[k]);
+            if (k.indexOf('Sessions') !== -1 && k.indexOf('Total') !== -1 && k.indexOf('B2B') === -1 && k.indexOf('percentage') === -1) totalSessions += cleanNum(row[k]);
+            if (k.indexOf('Units ordered') !== -1 && k.indexOf('B2B') === -1) totalUnits += cleanNum(row[k]);
+          }
+        }
+
+        var lyTotalSales=0, lySessions=0, lyUnits=0, lyB2BSales=0;
+        if (brLyRows) {
+          for (var li = 0; li < brLyRows.length; li++) {
+            var lrow = brLyRows[li];
+            var lkeys = Object.keys(lrow);
+            for (var lk = 0; lk < lkeys.length; lk++) {
+              var lkey = lkeys[lk];
+              if (lkey.indexOf('Ordered Product Sales') !== -1 && lkey.indexOf('B2B') === -1) lyTotalSales += cleanNum(lrow[lkey]);
+              if (lkey.indexOf('Sessions') !== -1 && lkey.indexOf('Total') !== -1 && lkey.indexOf('B2B') === -1 && lkey.indexOf('percentage') === -1) lySessions += cleanNum(lrow[lkey]);
+              if (lkey.indexOf('Units ordered') !== -1 && lkey.indexOf('B2B') === -1) lyUnits += cleanNum(lrow[lkey]);
+              if (lkey.indexOf('Ordered product sales') !== -1 && lkey.indexOf('B2B') !== -1) lyB2BSales += cleanNum(lrow[lkey]);
+            }
+          }
+        }
+
+        showProg(90,'Calculating...');
+        var acos  = totSpd>0&&totSal>0 ? totSpd/totSal : 0;
+        var tacos = totSpd>0&&totalSales>0 ? totSpd/totalSales : 0;
+        var cvr   = totOrd>0&&totClk>0 ? totOrd/totClk : 0;
+        var ctr   = totClk>0&&totImp>0 ? totClk/totImp : 0;
+        var acc   = document.getElementById('accSel').value;
+        var week  = document.getElementById('weekInp').value;
+
+        var curData = {
+          week:week, impressions:totImp, clicks:totClk,
+          spend:totSpd, ppcSales:totSal, totalSales:totalSales,
+          orders:totOrd, acos:acos, tacos:tacos, cvr:cvr, ctr:ctr,
+          breakdown:breakdown,
+          sessions:totalSessions,
+          units:totalUnits,
+          b2bSales:totalB2BSales
+        };
+        var lyData = brLyRows ? {totalSales:lyTotalSales, sessions:lySessions, units:lyUnits, b2bSales:lyB2BSales} : null;
+
+        saveToHistory(acc, curData);
+        renderHistoryOverview();
+
+        showProg(100,'Done!');
+        setTimeout(function() {
+          document.getElementById('prog').style.display = 'none';
+          renderResults(acc, week, curData, lyData);
+        }, 350);
+
+      } catch(err) {
+        showAlert('Error: ' + err.message);
+        document.getElementById('prog').style.display = 'none';
+        console.error(err);
+      }
+    }, 50);
+  });
+
+  // -- Render results --------------------------------------------------------
+  function renderResults(acc, week, d, ly) {
+    document.getElementById('results').style.display = 'block';
+    document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+
+    // FIX: define targets BEFORE using them
+    var tgt = getTargets(acc);
+    var acosTarget = tgt.acos / 100;
+    var tacosTarget = tgt.tacos / 100;
+
+    document.getElementById('rAcc').textContent = acc;
+    document.getElementById('rWeek').textContent = week;
+    document.getElementById('rAcos').textContent = pct(d.acos);
+    document.getElementById('rAcos').style.color = d.acos>acosTarget*1.5?'#f85149':d.acos>acosTarget?'#d29922':'#3fb950';
+    document.getElementById('rTacos').textContent = pct(d.tacos);
+    document.getElementById('rTacos').style.color = d.tacos>tacosTarget*1.5?'#f85149':d.tacos>tacosTarget?'#d29922':'#3fb950';
+
+    var isRed = d.acos > acosTarget*1.5 || d.tacos > tacosTarget*1.5;
+    var isYel = !isRed && (d.acos > acosTarget || d.tacos > tacosTarget);
+    var se = document.getElementById('rStatus');
+    if (isRed) { se.textContent='Red'; se.style.color='#f85149'; }
+    else if (isYel) { se.textContent='Yellow'; se.style.color='#d29922'; }
+    else { se.textContent='Green'; se.style.color='#3fb950'; }
+
+    document.getElementById('kRow1').innerHTML =
+      kpi('Spend','&#8364;'+fmt(d.spend),'SP+SB+SD','') +
+      kpi('PPC Sales','&#8364;'+fmt(d.ppcSales),'attributed','') +
+      kpi('Total Sales','&#8364;'+fmt(d.totalSales),'Business Report','g') +
+      kpi('Orders',fmtN(d.orders),'PPC orders','');
+
+    var ac = d.acos>acosTarget*1.5?'r':d.acos>acosTarget?'y':'g';
+    var tc = d.tacos>tacosTarget*1.5?'r':d.tacos>tacosTarget?'y':'g';
+    document.getElementById('kRow2').innerHTML =
+      kpi('ACOS',pct(d.acos),'target &lt;'+tgt.acos+'%',ac) +
+      kpi('TACOS',pct(d.tacos),'target &lt;'+tgt.tacos+'%',tc) +
+      kpi('CVR',pct(d.cvr),'orders/clicks','') +
+      kpi('Impressions',fmtN(d.impressions),'total','');
+
+    // Breakdown
+    var rows = d.breakdown;
+    var ti=0,tc2=0,ts=0,tsa=0,to=0;
+    var bdHtml = '';
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var a = r.sal>0?r.spd/r.sal:0;
+      var cv = r.clk>0?r.ord/r.clk:0;
+      bdHtml += '<tr><td style="font-weight:600;color:#fff">'+r.label+'</td>' +
+        '<td>'+fmtN(r.imp)+'</td><td>'+fmtN(r.clk)+'</td>' +
+        '<td>&#8364;'+fmt(r.spd)+'</td><td>&#8364;'+fmt(r.sal)+'</td><td>'+fmtN(r.ord)+'</td>' +
+        '<td style="color:'+(a>0.2?'#f85149':a>=0.12?'#d29922':'#3fb950')+'">'+pct(a)+'</td>' +
+        '<td>'+pct(cv)+'</td></tr>';
+      ti+=r.imp;tc2+=r.clk;ts+=r.spd;tsa+=r.sal;to+=r.ord;
+    }
+    var ta=tsa>0?ts/tsa:0,tcv=tc2>0?to/tc2:0;
+    bdHtml += '<tr><td>TOTAL</td><td>'+fmtN(ti)+'</td><td>'+fmtN(tc2)+'</td>' +
+      '<td>&#8364;'+fmt(ts)+'</td><td>&#8364;'+fmt(tsa)+'</td><td>'+fmtN(to)+'</td>' +
+      '<td style="color:'+(ta>0.2?'#f85149':ta>=0.12?'#d29922':'#3fb950')+'">'+pct(ta)+'</td>' +
+      '<td>'+pct(tcv)+'</td></tr>';
+    document.getElementById('bdBody').innerHTML = bdHtml;
+
+    // 4-week trend
+    var hist = getHistory(acc);
+    hist.sort(function(a,b){ return a.week.localeCompare(b.week); });
+    var last4 = hist.slice(-4);
+    var wowSec = document.getElementById('wowSection');
+    wowSec.style.display = 'block';
+    var last4rev = last4.slice().reverse();
+
+    var thead = '<tr><th>Metric</th>';
+    for (var wi = 0; wi < last4rev.length; wi++) {
+      var isCW = last4rev[wi].week === week;
+      thead += '<th'+(isCW?' style="color:#fff"':'')+'>'+last4rev[wi].week+(isCW?' <span style="font-size:9px;color:#3fb950;font-weight:700">CW</span>':'')+'</th>';
+      if (wi < last4rev.length-1) thead += '<th style="color:rgba(255,255,255,.25);font-size:9px">&#916;</th>';
+    }
+    thead += '</tr>';
+    document.getElementById('wowHead').innerHTML = thead;
+
+    var metrics = [
+      {lbl:'Spend',       key:'spend',      f:'e', gu:false},
+      {lbl:'PPC Sales',   key:'ppcSales',   f:'e', gu:true},
+      {lbl:'Total Sales', key:'totalSales', f:'e', gu:true},
+      {lbl:'Orders',      key:'orders',     f:'n', gu:true},
+      {lbl:'Impressions', key:'impressions',f:'n', gu:true},
+      {lbl:'Clicks',      key:'clicks',     f:'n', gu:true},
+      {lbl:'ACOS',        key:'acos',       f:'p', gu:false},
+      {lbl:'TACOS',       key:'tacos',      f:'p', gu:false},
+      {lbl:'CVR',         key:'cvr',        f:'p', gu:true},
+      {lbl:'CPC',         key:'cpc',        f:'e', gu:false},
+    ];
+
+    var wbody = '';
+    for (var mi = 0; mi < metrics.length; mi++) {
+      var m = metrics[mi];
+      wbody += '<tr><td style="font-weight:600;color:#fff">'+m.lbl+'</td>';
+      for (var wi2 = 0; wi2 < last4rev.length; wi2++) {
+        var wk = last4rev[wi2];
+        var val = m.key==='cpc' ? (wk.clicks>0?wk.spend/wk.clicks:0) : (wk[m.key]||0);
+        var isCW2 = wk.week === week;
+        var fv = m.f==='e'?'&#8364;'+fmt(val):m.f==='p'?pct(val):fmtN(val);
+        wbody += '<td style="'+(isCW2?'color:#fff;font-weight:600':'color:rgba(255,255,255,.6)')+'">'+fv+'</td>';
+        if (wi2 < last4rev.length-1) {
+          var nextWk = last4rev[wi2+1];
+          var prevVal = m.key==='cpc' ? (nextWk.clicks>0?nextWk.spend/nextWk.clicks:0) : (nextWk[m.key]||0);
+          var delta = prevVal>0?(val/prevVal-1):0;
+          var isUp=delta>0.005, isDn=delta<-0.005;
+          var imp=(isUp&&m.gu)||(isDn&&!m.gu);
+          var wrs=(isDn&&m.gu)||(isUp&&!m.gu);
+          var cls2=imp?'tag-g':wrs?'tag-r':'tag-n';
+          var txt=isUp?('+'+pct(delta)):isDn?pct(delta):'&#8212;';
+          wbody += '<td><span class="tag '+cls2+'">'+txt+'</span></td>';
+        }
+      }
+      wbody += '</tr>';
+    }
+    document.getElementById('wowBody').innerHTML = wbody;
+    document.getElementById('hnote').textContent = last4.length<2
+      ? 'Data saved. Import more weeks to see the trend.'
+      : 'Showing last '+last4.length+' weeks. Stored locally in your browser.';
+
+    // YoY
+    var yoySec = document.getElementById('yoySection');
+    if (ly) {
+      yoySec.style.display = 'block';
+      var currentUnits=d.units||0, currentSessions=d.sessions||0;
+      var currentCVR=currentSessions>0?currentUnits/currentSessions:0;
+      var lyCVR=ly.sessions>0?ly.units/ly.sessions:0;
+      document.getElementById('yoyHead').innerHTML =
+        '<tr><th>Metric</th><th>This Year</th><th>Last Year</th><th>YoY &#916;</th></tr>';
+      var yoyMetrics=[
+        {lbl:'Total Sales',        cy:d.totalSales,    py:ly.totalSales, f:'e',gu:true},
+        {lbl:'B2B Sales',          cy:d.b2bSales,      py:ly.b2bSales,   f:'e',gu:true},
+        {lbl:'Sessions',           cy:currentSessions, py:ly.sessions,   f:'n',gu:true},
+        {lbl:'Units Ordered',      cy:currentUnits,    py:ly.units,      f:'n',gu:true},
+        {lbl:'CVR (Unit/Session)', cy:currentCVR,      py:lyCVR,         f:'p',gu:true},
+      ];
+      var ybody='';
+      for(var yi=0;yi<yoyMetrics.length;yi++){
+        var ym=yoyMetrics[yi];
+        var delta2=ym.py>0?(ym.cy/ym.py-1):0;
+        var isUp2=delta2>0.005,isDn2=delta2<-0.005;
+        var imp2=(isUp2&&ym.gu)||(isDn2&&!ym.gu);
+        var wrs2=(isDn2&&ym.gu)||(isUp2&&!ym.gu);
+        var cls3=imp2?'tag-g':wrs2?'tag-r':'tag-n';
+        var txt2=isUp2?('+'+pct(delta2)):isDn2?pct(delta2):'-';
+        var cyFmt=ym.f==='e'?'&#8364;'+fmt(ym.cy):ym.f==='p'?pct(ym.cy):fmtN(ym.cy);
+        var pyFmt=ym.f==='e'?'&#8364;'+fmt(ym.py):ym.f==='p'?pct(ym.py):fmtN(ym.py);
+        ybody+='<tr><td style="font-weight:600;color:#fff">'+ym.lbl+'</td>'+
+          '<td style="color:#fff;font-weight:600">'+cyFmt+'</td>'+
+          '<td style="color:rgba(255,255,255,.4)">'+pyFmt+'</td>'+
+          '<td><span class="tag '+cls3+'">'+txt2+'</span></td></tr>';
+      }
+      document.getElementById('yoyBody').innerHTML=ybody;
+      document.getElementById('yoynote').textContent='YoY comparison based on uploaded last-year Business Report.';
+    } else {
+      yoySec.style.display='none';
+    }
+
+    // Copy row
+    var cols=[acc,week,
+      Math.round(d.impressions),Math.round(d.clicks),
+      d.spend.toFixed(2),d.ppcSales.toFixed(2),d.totalSales.toFixed(2),
+      Math.round(d.orders),
+      (d.acos*100).toFixed(2)+'%',(d.tacos*100).toFixed(2)+'%',
+      (d.cvr*100).toFixed(2)+'%',(d.ctr*100).toFixed(3)+'%',''
+    ];
+    document.getElementById('copyVal').textContent=cols.join('\t');
+  }
+
+  function kpi(lbl,val,sub,cls){
+    return '<div class="kpi'+(cls?' '+cls:'')+'"><div class="kpi-lbl">'+lbl+'</div><div class="kpi-val">'+val+'</div><div class="kpi-sub">'+sub+'</div></div>';
+  }
+
+  // -- Copy ------------------------------------------------------------------
+  document.getElementById('btnCopy').addEventListener('click',function(){
+    var text=document.getElementById('copyVal').textContent;
+    navigator.clipboard.writeText(text).then(function(){
+      var el=document.getElementById('copyOk');
+      el.style.display='inline';
+      setTimeout(function(){el.style.display='none';},2000);
+    });
+  });
+
+  // -- Progress / alert ------------------------------------------------------
+  function showProg(p,lbl){
+    document.getElementById('prog').style.display='block';
+    document.getElementById('progFill').style.width=p+'%';
+    document.getElementById('progLbl').textContent=lbl;
+  }
+  function showAlert(msg){
+    var el=document.getElementById('alertBox');
+    el.textContent=msg;el.style.display='block';
+  }
+  function hideAlert(){document.getElementById('alertBox').style.display='none';}
+
+  // -- Auto ISO week ---------------------------------------------------------
+  var now=new Date();
+  var tmp=new Date(Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()));
+  tmp.setUTCDate(tmp.getUTCDate()+4-(tmp.getUTCDay()||7));
+  var ys=new Date(Date.UTC(tmp.getUTCFullYear(),0,1));
+  var wn=Math.ceil((((tmp-ys)/86400000)+1)/7);
+  document.getElementById('weekInp').value=tmp.getUTCFullYear()+'-W'+String(wn).padStart(2,'0');
+
+  // -- History Overview (visible on load) -----------------------------------
+  function renderHistoryOverview() {
+    var content = document.getElementById('hovContent');
+    var countEl = document.getElementById('hovCount');
+    if (!content) return;
+
+    var totalWeeks = 0;
+    var html = '';
+
+    for (var ai = 0; ai < accounts.length; ai++) {
+      var acc = accounts[ai];
+      var hist = getHistory(acc);
+      if (!hist || hist.length === 0) continue;
+      hist.sort(function(a,b){ return b.week.localeCompare(a.week); }); // newest first
+      totalWeeks += hist.length;
+
+      var tgt = getTargets(acc);
+      var acosT = tgt.acos / 100;
+      var tacosT = tgt.tacos / 100;
+
+      html += '<div class="hov-acc">';
+      html += '<div class="hov-acc-name">'+acc+' <span style="font-size:10px;font-weight:400;color:rgba(255,255,255,.3)">'+hist.length+' week'+(hist.length>1?'s':'')+'</span></div>';
+      html += '<div class="hov-table-wrap"><table class="hov-table"><thead><tr>';
+      html += '<th>Week</th><th>Spend</th><th>PPC Sales</th><th>Total Sales</th><th>Orders</th><th>ACOS</th><th>TACOS</th><th>CVR</th><th></th>';
+      html += '</tr></thead><tbody>';
+
+      for (var hi = 0; hi < hist.length; hi++) {
+        var h = hist[hi];
+        var acosCol = h.acos > acosT*1.5 ? 'hov-r' : h.acos > acosT ? 'hov-y' : 'hov-g';
+        var tacosCol = h.tacos > tacosT*1.5 ? 'hov-r' : h.tacos > tacosT ? 'hov-y' : 'hov-g';
+        html += '<tr>';
+        html += '<td style="font-weight:600;color:#fff">'+h.week+'</td>';
+        html += '<td>&#8364;'+fmt(h.spend||0)+'</td>';
+        html += '<td>&#8364;'+fmt(h.ppcSales||0)+'</td>';
+        html += '<td>&#8364;'+fmt(h.totalSales||0)+'</td>';
+        html += '<td>'+fmtN(h.orders||0)+'</td>';
+        html += '<td><span class="hov-tag '+acosCol+'">'+pct(h.acos||0)+'</span></td>';
+        html += '<td><span class="hov-tag '+tacosCol+'">'+pct(h.tacos||0)+'</span></td>';
+        html += '<td>'+pct(h.cvr||0)+'</td>';
+        html += '<td><button class="hov-del" data-acc="'+acc+'" data-week="'+h.week+'" title="Delete week">&#x2715;</button></td>';
+        html += '</tr>';
+      }
+
+      html += '</tbody></table></div></div>';
+    }
+
+    if (html === '') {
+      content.innerHTML = '<div class="hov-empty">No data yet. Upload files and extract to start building history.</div>';
+      countEl.textContent = '';
+    } else {
+      content.innerHTML = html;
+      countEl.textContent = '— '+totalWeeks+' week'+(totalWeeks>1?'s':'');
+      // Delete buttons
+      var dels = content.querySelectorAll('.hov-del');
+      for (var di = 0; di < dels.length; di++) {
+        dels[di].addEventListener('click', function() {
+          var a = this.getAttribute('data-acc');
+          var w = this.getAttribute('data-week');
+          var h2 = getHistory(a).filter(function(x){ return x.week !== w; });
+          lsSet(historyKey(a), JSON.stringify(h2));
+          renderHistoryOverview();
+        });
+      }
+    }
+  }
+
+  // -- Init ------------------------------------------------------------------
+  var now=new Date();
+  var tmp=new Date(Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()));
+  tmp.setUTCDate(tmp.getUTCDate()+4-(tmp.getUTCDay()||7));
+  var ys=new Date(Date.UTC(tmp.getUTCFullYear(),0,1));
+  var wn=Math.ceil((((tmp-ys)/86400000)+1)/7);
+  document.getElementById('weekInp').value=tmp.getUTCFullYear()+'-W'+String(wn).padStart(2,'0');
+
+  loadAccounts();
+  renderHistoryOverview();
+
+})();
+</script>
+</body>
+</html>
