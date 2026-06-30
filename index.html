@@ -986,6 +986,30 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
       html += '</tbody></table></div>';
     }
 
+    // Portfolio breakdown
+    if (d.portfolios && d.portfolios.length > 0) {
+      var thP = function(t){ return '<th style="font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:rgba(255,255,255,.3);padding:6px 10px;text-align:left;background:#161b22;border-bottom:1px solid #30363d;white-space:nowrap">'+t+'</th>'; };
+      html += '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px">Portfolio breakdown</div>';
+      html += '<div style="overflow-x:auto;margin-bottom:18px"><table style="width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums">';
+      html += '<thead><tr>'+thP('Portfolio')+thP('Spend')+thP('PPC Sales')+thP('Total Sales')+thP('Orders')+thP('ACOS')+'</tr></thead><tbody>';
+      var pts=0,ptsa=0,ptot=0,pord=0;
+      var ptdS = function(v,col){ return '<td style="font-size:12px;padding:6px 10px;border-bottom:1px solid #21262d;color:'+(col||'rgba(255,255,255,.7)')+'">'+v+'</td>'; };
+      for (var pi = 0; pi < d.portfolios.length; pi++) {
+        var p = d.portfolios[pi];
+        var pname = p.name.replace(/^\d+\.\s*/,'');
+        var pacos = p.ppcSales>0?p.spend/p.ppcSales:0;
+        html += '<tr>'+ptdS(pname,'#cbd3dc')+ptdS('&#8364;'+fmt(p.spend))+ptdS('&#8364;'+fmt(p.ppcSales))+
+          ptdS(p.totalSales>0?'&#8364;'+fmt(p.totalSales):'-')+ptdS(fmtN(p.orders))+
+          ptdS(p.ppcSales>0?pct(pacos):'-',pacos>0.3?'#f85149':pacos>0.15?'#d29922':'#3fb950')+'</tr>';
+        pts+=p.spend; ptsa+=p.ppcSales; ptot+=p.totalSales; pord+=p.orders;
+      }
+      var ptdT = function(v,col){ return '<td style="font-size:12px;font-weight:700;padding:6px 10px;color:'+(col||'#fff')+'">'+v+'</td>'; };
+      var ptacos = ptsa>0?pts/ptsa:0;
+      html += '<tr>'+ptdT('TOTAL')+ptdT('&#8364;'+fmt(pts))+ptdT('&#8364;'+fmt(ptsa))+ptdT(ptot>0?'&#8364;'+fmt(ptot):'-')+ptdT(fmtN(pord))+
+        ptdT(ptsa>0?pct(ptacos):'-',ptacos>0.3?'#f85149':ptacos>0.15?'#d29922':'#3fb950')+'</tr>';
+      html += '</tbody></table></div>';
+    }
+
     // Week-over-week trend (up to 4 weeks ending on selected)
     var last4 = hist.slice(Math.max(0,idx-3), idx+1).reverse();
     if (last4.length >= 1) {
@@ -1255,6 +1279,30 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
         '<td style="font-size:12px;font-weight:700;color:#fff;padding:6px 10px">'+fmtN(to)+'</td>'+
         '<td style="font-size:12px;font-weight:700;color:'+(ta>0.2?'#f85149':ta>=acosTarget?'#d29922':'#3fb950')+';padding:6px 10px">'+pct(ta)+'</td>'+
         '<td style="font-size:12px;font-weight:700;color:#fff;padding:6px 10px">'+pct(tcv)+'</td></tr>';
+      html += '</tbody></table></div>';
+    }
+
+    // Portfolio breakdown
+    if (h.portfolios && h.portfolios.length > 0) {
+      var thPh = function(t){ return '<th style="font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:rgba(255,255,255,.3);padding:6px 10px;text-align:left;background:#161b22;border-bottom:1px solid #30363d;white-space:nowrap">'+t+'</th>'; };
+      html += '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px">Portfolio breakdown</div>';
+      html += '<div style="overflow-x:auto;margin-bottom:18px"><table style="width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums">';
+      html += '<thead><tr>'+thPh('Portfolio')+thPh('Spend')+thPh('PPC Sales')+thPh('Total Sales')+thPh('Orders')+thPh('ACOS')+'</tr></thead><tbody>';
+      var hpts=0,hptsa=0,hptot=0,hpord=0;
+      var ptdH = function(v,col){ return '<td style="font-size:12px;padding:6px 10px;border-bottom:1px solid #21262d;color:'+(col||'rgba(255,255,255,.7)')+'">'+v+'</td>'; };
+      for (var hpi = 0; hpi < h.portfolios.length; hpi++) {
+        var hp = h.portfolios[hpi];
+        var hpname = hp.name.replace(/^\d+\.\s*/,'');
+        var hpacos = hp.ppcSales>0?hp.spend/hp.ppcSales:0;
+        html += '<tr>'+ptdH(hpname,'#cbd3dc')+ptdH('&#8364;'+fmt(hp.spend))+ptdH('&#8364;'+fmt(hp.ppcSales))+
+          ptdH(hp.totalSales>0?'&#8364;'+fmt(hp.totalSales):'-')+ptdH(fmtN(hp.orders))+
+          ptdH(hp.ppcSales>0?pct(hpacos):'-',hpacos>0.3?'#f85149':hpacos>0.15?'#d29922':'#3fb950')+'</tr>';
+        hpts+=hp.spend; hptsa+=hp.ppcSales; hptot+=hp.totalSales; hpord+=hp.orders;
+      }
+      var hptdT = function(v,col){ return '<td style="font-size:12px;font-weight:700;padding:6px 10px;color:'+(col||'#fff')+'">'+v+'</td>'; };
+      var hptacos = hptsa>0?hpts/hptsa:0;
+      html += '<tr>'+hptdT('TOTAL')+hptdT('&#8364;'+fmt(hpts))+hptdT('&#8364;'+fmt(hptsa))+hptdT(hptot>0?'&#8364;'+fmt(hptot):'-')+hptdT(fmtN(hpord))+
+        hptdT(hptsa>0?pct(hptacos):'-',hptacos>0.3?'#f85149':hptacos>0.15?'#d29922':'#3fb950')+'</tr>';
       html += '</tbody></table></div>';
     }
 
