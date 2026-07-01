@@ -184,6 +184,7 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
     <option value="">All accounts</option>
   </select>
 </div>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" id="hovMetricToggles"></div>
 <div class="panel hov-wrap" id="hovPanel">
   <div id="hovContent"></div>
 </div>
@@ -1097,12 +1098,54 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
     renderHistoryOverview();
   });
 
+  // -- Metric toggles --
+  var _hovMetricDefs = [
+    {key:'spend',     label:'Spend',      on:true},
+    {key:'ppcSales',  label:'PPC Sales',  on:true},
+    {key:'totalSales',label:'Total Sales', on:true},
+    {key:'ppcpct',    label:'PPC%',       on:true},
+    {key:'orders',    label:'Orders',     on:true},
+    {key:'acos',      label:'ACOS',       on:true},
+    {key:'tacos',     label:'TACOS',      on:true},
+    {key:'cvr',       label:'CVR',        on:false},
+  ];
+  (function(){
+    try { var s=JSON.parse(localStorage.getItem('ppc_hov_metrics')||'null'); if(s&&s.length===_hovMetricDefs.length) for(var i=0;i<s.length;i++) _hovMetricDefs[i].on=s[i]; } catch(e){}
+  })();
+
+  function saveMetricPrefs(){ try{localStorage.setItem('ppc_hov_metrics',JSON.stringify(_hovMetricDefs.map(function(m){return m.on;})));}catch(e){} }
+
+  function renderMetricToggles() {
+    var wrap = document.getElementById('hovMetricToggles');
+    if (!wrap) return;
+    var html = '';
+    for (var i = 0; i < _hovMetricDefs.length; i++) {
+      var m = _hovMetricDefs[i];
+      html += '<button data-metric-idx="'+i+'" style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid '+(m.on?'#58a6ff':'#30363d')+';background:'+(m.on?'rgba(88,166,255,.15)':'transparent')+';color:'+(m.on?'#58a6ff':'rgba(255,255,255,.35)')+';cursor:pointer;letter-spacing:.3px">'+m.label+'</button>';
+    }
+    wrap.innerHTML = html;
+  }
+
+  document.getElementById('hovMetricToggles').addEventListener('click', function(e) {
+    var btn = e.target.closest('[data-metric-idx]');
+    if (!btn) return;
+    var idx = parseInt(btn.getAttribute('data-metric-idx'));
+    _hovMetricDefs[idx].on = !_hovMetricDefs[idx].on;
+    saveMetricPrefs();
+    renderMetricToggles();
+    renderHistoryOverview();
+  });
+
   function renderHistoryOverview() {
     var content = document.getElementById('hovContent');
     var countEl = document.getElementById('hovCount');
     if (!content) return;
 
     populateHovFilter();
+    renderMetricToggles();
+
+    var activeMetrics = _hovMetricDefs.filter(function(m){ return m.on; });
+    var colspan = activeMetrics.length + 2; // +Week +del
 
     var totalWeeks = 0;
     var html = '';
@@ -1123,29 +1166,33 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
       html += '<div class="hov-acc">';
       html += '<div class="hov-acc-name">'+acc+' <span style="font-size:10px;font-weight:400;color:rgba(255,255,255,.3)">'+hist.length+' week'+(hist.length>1?'s':'')+'</span><button class="btn-share" data-share-acc="'+acc+'">&#128279; Share report</button></div>';
       html += '<div class="hov-table-wrap" style="border-radius:8px"><table class="hov-table"><thead><tr>';
-      html += '<th>Week</th><th>Spend</th><th>PPC Sales</th><th>Total Sales</th><th>PPC%</th><th>Orders</th><th>ACOS</th><th>TACOS</th><th>CVR</th><th></th>';
-      html += '</tr></thead><tbody>';
+      html += '<th>Week</th>';
+      for (var mi = 0; mi < activeMetrics.length; mi++) html += '<th>'+activeMetrics[mi].label+'</th>';
+      html += '<th></th></tr></thead><tbody>';
 
       for (var hi = 0; hi < hist.length; hi++) {
         var h = hist[hi];
         var acosCol = h.acos > acosT*1.5 ? 'hov-r' : h.acos > acosT ? 'hov-y' : 'hov-g';
         var tacosCol = h.tacos > tacosT*1.5 ? 'hov-r' : h.tacos > tacosT ? 'hov-y' : 'hov-g';
         var isOpen = _hovSelected[acc] === h.week;
+        var hPpcPct = (h.totalSales||0)>0 ? (h.ppcSales||0)/(h.totalSales||1)*100 : 0;
         html += '<tr class="hov-data-row" data-acc="'+acc+'" data-week="'+h.week+'" style="cursor:pointer;'+(isOpen?'background:rgba(88,166,255,.05)':'')+'\">';
         html += '<td style="font-weight:600;color:#58a6ff">'+h.week+(isOpen?' ▲':' ▼')+'</td>';
-        html += '<td>&#8364;'+fmt(h.spend||0)+'</td>';
-        html += '<td>&#8364;'+fmt(h.ppcSales||0)+'</td>';
-        html += '<td>&#8364;'+fmt(h.totalSales||0)+'</td>';
-        var hPpcPct = (h.totalSales||0)>0 ? (h.ppcSales||0)/(h.totalSales||1)*100 : 0;
-        html += '<td style="color:rgba(255,255,255,.9)">'+hPpcPct.toFixed(1)+'%</td>';
-        html += '<td>'+fmtN(h.orders||0)+'</td>';
-        html += '<td><span class="hov-tag '+acosCol+'">'+pct(h.acos||0)+'</span></td>';
-        html += '<td><span class="hov-tag '+tacosCol+'">'+pct(h.tacos||0)+'</span></td>';
-        html += '<td>'+pct(h.cvr||0)+'</td>';
+        for (var mi2 = 0; mi2 < activeMetrics.length; mi2++) {
+          var mk = activeMetrics[mi2].key;
+          if (mk==='spend')      html += '<td>&#8364;'+fmt(h.spend||0)+'</td>';
+          else if (mk==='ppcSales')   html += '<td>&#8364;'+fmt(h.ppcSales||0)+'</td>';
+          else if (mk==='totalSales') html += '<td>&#8364;'+fmt(h.totalSales||0)+'</td>';
+          else if (mk==='ppcpct')     html += '<td>'+hPpcPct.toFixed(1)+'%</td>';
+          else if (mk==='orders')     html += '<td>'+fmtN(h.orders||0)+'</td>';
+          else if (mk==='acos')       html += '<td><span class="hov-tag '+acosCol+'">'+pct(h.acos||0)+'</span></td>';
+          else if (mk==='tacos')      html += '<td><span class="hov-tag '+tacosCol+'">'+pct(h.tacos||0)+'</span></td>';
+          else if (mk==='cvr')        html += '<td>'+pct(h.cvr||0)+'</td>';
+        }
         html += '<td><button class="hov-del" data-acc="'+acc+'" data-week="'+h.week+'" title="Delete week">&#x2715;</button></td>';
         html += '</tr>';
         if (isOpen) {
-          html += '<tr class="hov-detail-row"><td colspan="12" style="padding:0">'+renderHovDetail(acc, h.week)+'</td></tr>';
+          html += '<tr class="hov-detail-row"><td colspan="'+colspan+'" style="padding:0">'+renderHovDetail(acc, h.week)+'</td></tr>';
         }
       }
 
