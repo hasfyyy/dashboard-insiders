@@ -178,7 +178,12 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
 <!-- WEEKLY TAB -->
 <div class="tab-pane active" id="tab-weekly">
 
-<div class="sec">History overview <span id="hovCount" style="font-size:10px;color:rgba(255,255,255,.25);font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+<div class="sec" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  History overview <span id="hovCount" style="font-size:10px;color:rgba(255,255,255,.25);font-weight:400;text-transform:none;letter-spacing:0"></span>
+  <select id="hovAccFilter" style="margin-left:auto;background:#161b22;color:#e6edf3;border:1px solid #30363d;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;outline:none">
+    <option value="">All accounts</option>
+  </select>
+</div>
 <div class="panel hov-wrap" id="hovPanel">
   <div id="hovContent"></div>
 </div>
@@ -1069,17 +1074,42 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
 
   // -- History Overview (visible on load) -----------------------------------
   var _hovSelected = {}; // acc -> week currently expanded
+  var _hovFilterAcc = ''; // currently selected account filter
+
+  function populateHovFilter() {
+    var sel = document.getElementById('hovAccFilter');
+    if (!sel) return;
+    var current = sel.value;
+    sel.innerHTML = '<option value="">All accounts</option>';
+    for (var i = 0; i < accounts.length; i++) {
+      var acc = accounts[i];
+      if (!getHistory(acc) || getHistory(acc).length === 0) continue;
+      var opt = document.createElement('option');
+      opt.value = acc;
+      opt.textContent = acc;
+      if (acc === current) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+
+  document.getElementById('hovAccFilter').addEventListener('change', function() {
+    _hovFilterAcc = this.value;
+    renderHistoryOverview();
+  });
 
   function renderHistoryOverview() {
     var content = document.getElementById('hovContent');
     var countEl = document.getElementById('hovCount');
     if (!content) return;
 
+    populateHovFilter();
+
     var totalWeeks = 0;
     var html = '';
 
     for (var ai = 0; ai < accounts.length; ai++) {
       var acc = accounts[ai];
+      if (_hovFilterAcc && acc !== _hovFilterAcc) continue;
       var hist = getHistory(acc);
       if (!hist || hist.length === 0) continue;
       hist.sort(function(a,b){ return b.week.localeCompare(a.week); });
