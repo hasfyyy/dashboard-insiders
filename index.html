@@ -209,7 +209,14 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
       <select id="accSel"><option value="">-- Select account --</option></select>
     </div>
     <div class="field">
-      <label>Week (ISO)</label>
+      <label>Period type</label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button id="ptWeekly" class="btn" style="flex:1;padding:6px;font-size:12px;background:rgba(88,166,255,.2);border-color:#58a6ff" onclick="setPeriodType('weekly')">Weekly</button>
+        <button id="ptMonthly" class="btn" style="flex:1;padding:6px;font-size:12px" onclick="setPeriodType('monthly')">Monthly</button>
+      </div>
+    </div>
+    <div class="field">
+      <label id="weekInpLabel">Week (ISO)</label>
       <input type="text" id="weekInp" placeholder="e.g. 2026-W26">
     </div>
   </div>
@@ -621,6 +628,29 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
     reader2.readAsText(file);
   });
 
+  var _periodType = 'weekly';
+
+  function setPeriodType(type) {
+    _periodType = type;
+    var wBtn = document.getElementById('ptWeekly');
+    var mBtn = document.getElementById('ptMonthly');
+    var lbl  = document.getElementById('weekInpLabel');
+    var inp  = document.getElementById('weekInp');
+    if (type === 'monthly') {
+      wBtn.style.background='transparent'; wBtn.style.borderColor='#30363d'; wBtn.style.color='';
+      mBtn.style.background='rgba(88,166,255,.2)'; mBtn.style.borderColor='#58a6ff'; mBtn.style.color='#58a6ff';
+      lbl.textContent = 'Month (ISO)';
+      inp.placeholder = 'e.g. 2026-M06';
+    } else {
+      mBtn.style.background='transparent'; mBtn.style.borderColor='#30363d'; mBtn.style.color='';
+      wBtn.style.background='rgba(88,166,255,.2)'; wBtn.style.borderColor='#58a6ff'; wBtn.style.color='#58a6ff';
+      lbl.textContent = 'Week (ISO)';
+      inp.placeholder = 'e.g. 2026-W26';
+    }
+  }
+
+  setPeriodType('weekly');
+
   function checkReady() {
     var ok = bulkWB && brRows && document.getElementById('accSel').value && document.getElementById('weekInp').value;
     document.getElementById('processBtn').disabled = !ok;
@@ -737,7 +767,11 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
         };
         var lyData = brLyRows ? {totalSales:lyTotalSales, sessions:lySessions, units:lyUnits, b2bSales:lyB2BSales} : null;
 
-        saveToHistory(acc, curData);
+        if (_periodType === 'monthly') {
+          saveToMonthlyHistory(acc, curData);
+        } else {
+          saveToHistory(acc, curData);
+        }
         renderHistoryOverview();
 
         showProg(100,'Done!');
