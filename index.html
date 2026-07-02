@@ -211,8 +211,8 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
     <div class="field">
       <label>Period type</label>
       <div style="display:flex;gap:8px;margin-top:4px">
-        <button id="ptWeekly" class="btn" style="flex:1;padding:6px;font-size:12px;background:rgba(88,166,255,.2);border-color:#58a6ff" onclick="setPeriodType('weekly')">Weekly</button>
-        <button id="ptMonthly" class="btn" style="flex:1;padding:6px;font-size:12px" onclick="setPeriodType('monthly')">Monthly</button>
+        <button id="ptWeekly" class="btn" style="flex:1;padding:6px;font-size:12px;background:rgba(88,166,255,.2);border:1px solid #58a6ff;color:#58a6ff;margin-top:0;width:auto" onclick="setPeriodType('weekly')">Weekly</button>
+        <button id="ptMonthly" class="btn" style="flex:1;padding:6px;font-size:12px;background:transparent;border:1px solid #30363d;color:rgba(255,255,255,.6);margin-top:0;width:auto;cursor:pointer" onclick="setPeriodType('monthly')">Monthly</button>
       </div>
     </div>
     <div class="field">
@@ -637,12 +637,12 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
     var lbl  = document.getElementById('weekInpLabel');
     var inp  = document.getElementById('weekInp');
     if (type === 'monthly') {
-      wBtn.style.background='transparent'; wBtn.style.borderColor='#30363d'; wBtn.style.color='';
+      wBtn.style.background='transparent'; wBtn.style.borderColor='#30363d'; wBtn.style.color='rgba(255,255,255,.6)';
       mBtn.style.background='rgba(88,166,255,.2)'; mBtn.style.borderColor='#58a6ff'; mBtn.style.color='#58a6ff';
       lbl.textContent = 'Month (ISO)';
       inp.placeholder = 'e.g. 2026-M06';
     } else {
-      mBtn.style.background='transparent'; mBtn.style.borderColor='#30363d'; mBtn.style.color='';
+      mBtn.style.background='transparent'; mBtn.style.borderColor='#30363d'; mBtn.style.color='rgba(255,255,255,.6)';
       wBtn.style.background='rgba(88,166,255,.2)'; wBtn.style.borderColor='#58a6ff'; wBtn.style.color='#58a6ff';
       lbl.textContent = 'Week (ISO)';
       inp.placeholder = 'e.g. 2026-W26';
