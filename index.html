@@ -636,17 +636,26 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
     var mBtn = document.getElementById('ptMonthly');
     var lbl  = document.getElementById('weekInpLabel');
     var inp  = document.getElementById('weekInp');
+    // A week value left over from before switching (e.g. "2026-W32") is the wrong format for a month period
+    // and would silently get treated as garbage input downstream — clear it so the placeholder for the NEW
+    // period type is what's actually visible, instead of stale text that looks like it still applies.
+    var prevVal = (inp.value||'').trim();
+    var looksLikeWeek = /^\d{4}-W\d{1,2}$/i.test(prevVal);
+    var looksLikeMonth = /^\d{4}-M\d{1,2}$/i.test(prevVal);
     if (type === 'monthly') {
       wBtn.style.background='transparent'; wBtn.style.borderColor='#30363d'; wBtn.style.color='rgba(255,255,255,.6)';
       mBtn.style.background='rgba(88,166,255,.2)'; mBtn.style.borderColor='#58a6ff'; mBtn.style.color='#58a6ff';
       lbl.textContent = 'Month (ISO)';
       inp.placeholder = 'e.g. 2026-M06';
+      if (looksLikeWeek) inp.value = '';
     } else {
       mBtn.style.background='transparent'; mBtn.style.borderColor='#30363d'; mBtn.style.color='rgba(255,255,255,.6)';
       wBtn.style.background='rgba(88,166,255,.2)'; wBtn.style.borderColor='#58a6ff'; wBtn.style.color='#58a6ff';
       lbl.textContent = 'Week (ISO)';
       inp.placeholder = 'e.g. 2026-W26';
+      if (looksLikeMonth) inp.value = '';
     }
+    checkReady();
   }
 
   document.getElementById('ptWeekly').addEventListener('click', function(){ setPeriodType('weekly'); });
