@@ -713,6 +713,7 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
 
         var totImp=0,totClk=0,totSpd=0,totSal=0,totOrd=0;
         var breakdown = [];
+        var portMap = {};
 
         for (var si = 0; si < sheetDefs.length; si++) {
           var sd = sheetDefs[si];
@@ -723,12 +724,19 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
           for (var ri = 0; ri < rows.length; ri++) {
             var r = rows[ri];
             if (String(r['Entity']||'').trim() !== 'Campaign') continue;
-            imp+=cleanNum(r['Impressions']); clk+=cleanNum(r['Clicks']);
-            spd+=cleanNum(r['Spend']); sal+=cleanNum(r['Sales']); ord+=cleanNum(r['Orders']);
+            var rImp=cleanNum(r['Impressions']), rClk=cleanNum(r['Clicks']),
+                rSpd=cleanNum(r['Spend']), rSal=cleanNum(r['Sales']), rOrd=cleanNum(r['Orders']);
+            imp+=rImp; clk+=rClk; spd+=rSpd; sal+=rSal; ord+=rOrd;
+            var pname = String(r['Portfolio Name']||'').trim() || '(No Portfolio)';
+            if (!portMap[pname]) portMap[pname] = {name:pname, spend:0, ppcSales:0, orders:0, totalSales:0};
+            portMap[pname].spend += rSpd; portMap[pname].ppcSales += rSal; portMap[pname].orders += rOrd;
           }
           breakdown.push({label:sd.label,imp:imp,clk:clk,spd:spd,sal:sal,ord:ord});
           totImp+=imp; totClk+=clk; totSpd+=spd; totSal+=sal; totOrd+=ord;
         }
+
+        var portfolios = Object.keys(portMap).map(function(k){ return portMap[k]; })
+          .sort(function(a,b){ return b.spend - a.spend; });
 
         showProg(70,'Reading Business Report...');
         var totalSales=0, totalSessions=0, totalUnits=0, totalB2BSales=0;
@@ -772,6 +780,7 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
           spend:totSpd, ppcSales:totSal, totalSales:totalSales,
           orders:totOrd, acos:acos, tacos:tacos, cvr:cvr, ctr:ctr,
           breakdown:breakdown,
+          portfolios:portfolios,
           sessions:totalSessions,
           units:totalUnits,
           b2bSales:totalB2BSales
@@ -1686,6 +1695,29 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
         '<td style="font-size:12px;font-weight:700;color:#fff;padding:6px 10px">'+fmtN(to)+'</td>'+
         '<td style="font-size:12px;font-weight:700;color:'+(ta2>0.2?'#f85149':ta2>=acosTarget?'#d29922':'#3fb950')+';padding:6px 10px">'+pct(ta2)+'</td>'+
         '<td style="font-size:12px;font-weight:700;color:#fff;padding:6px 10px">'+pct(tcv2)+'</td></tr>';
+      html += '</tbody></table></div>';
+    }
+
+    if (d.portfolios && d.portfolios.length > 0) {
+      var thP2 = function(t){ return '<th style="font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:rgba(255,255,255,.3);padding:6px 10px;text-align:left;background:#161b22;border-bottom:1px solid #30363d;white-space:nowrap">'+t+'</th>'; };
+      html += '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px">Portfolio breakdown</div>';
+      html += '<div style="overflow-x:auto;margin-bottom:18px"><table style="width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums">';
+      html += '<thead><tr>'+thP2('Portfolio')+thP2('Spend')+thP2('PPC Sales')+thP2('Total Sales')+thP2('Orders')+thP2('ACOS')+'</tr></thead><tbody>';
+      var pts2=0,ptsa2=0,ptot2=0,pord2=0;
+      var ptdS2 = function(v,col){ return '<td style="font-size:12px;padding:6px 10px;border-bottom:1px solid #21262d;color:'+(col||'rgba(255,255,255,.7)')+'">'+v+'</td>'; };
+      for (var pi2 = 0; pi2 < d.portfolios.length; pi2++) {
+        var p2 = d.portfolios[pi2];
+        var pname2 = p2.name.replace(/^\d+\.\s*/,'');
+        var pacos2 = p2.ppcSales>0?p2.spend/p2.ppcSales:0;
+        html += '<tr>'+ptdS2(pname2,'#cbd3dc')+ptdS2('&#8364;'+fmt(p2.spend))+ptdS2('&#8364;'+fmt(p2.ppcSales))+
+          ptdS2(p2.totalSales>0?'&#8364;'+fmt(p2.totalSales):'-')+ptdS2(fmtN(p2.orders))+
+          ptdS2(p2.ppcSales>0?pct(pacos2):'-',pacos2>0.3?'#f85149':pacos2>0.15?'#d29922':'#3fb950')+'</tr>';
+        pts2+=p2.spend; ptsa2+=p2.ppcSales; ptot2+=p2.totalSales; pord2+=p2.orders;
+      }
+      var ptdT2 = function(v,col){ return '<td style="font-size:12px;font-weight:700;padding:6px 10px;color:'+(col||'#fff')+'">'+v+'</td>'; };
+      var ptacos2 = ptsa2>0?pts2/ptsa2:0;
+      html += '<tr>'+ptdT2('TOTAL')+ptdT2('&#8364;'+fmt(pts2))+ptdT2('&#8364;'+fmt(ptsa2))+ptdT2(ptot2>0?'&#8364;'+fmt(ptot2):'-')+ptdT2(fmtN(pord2))+
+        ptdT2(ptsa2>0?pct(ptacos2):'-',ptacos2>0.3?'#f85149':ptacos2>0.15?'#d29922':'#3fb950')+'</tr>';
       html += '</tbody></table></div>';
     }
 
