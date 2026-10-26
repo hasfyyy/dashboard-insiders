@@ -600,6 +600,7 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
     var reader = new FileReader();
     reader.onload = function(ev) {
       bulkWB = XLSX.read(ev.target.result, {type:'array'});
+      fixBulkRanges(bulkWB);
       checkReady();
     };
     reader.readAsArrayBuffer(file);
@@ -698,6 +699,26 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
     return res.map(function(s) { return s.trim().replace(/^"|"$/g,''); });
   }
 
+
+  // Amazon's newer bulk export (w43, 26 oct 2026) declares the Campaigns sheet as "A1:BB1" although it holds thousands of rows;
+  // sheet_to_json trusts that range and saw ZERO Sponsored Products campaigns (all SP spend / sales / orders missing).
+  // Recompute every sheet's range from the cells that really exist.
+  function fixBulkRanges(wb) {
+    wb.SheetNames.forEach(function(n) {
+      var ws = wb.Sheets[n]; if (!ws) return;
+      var minR=Infinity,minC=Infinity,maxR=-1,maxC=-1;
+      for (var addr in ws) {
+        if (addr[0]==='!') continue;
+        var c = XLSX.utils.decode_cell(addr);
+        if (c.r<minR) minR=c.r; if (c.c<minC) minC=c.c; if (c.r>maxR) maxR=c.r; if (c.c>maxC) maxC=c.c;
+      }
+      if (maxR>=0) ws['!ref'] = XLSX.utils.encode_range({s:{r:minR,c:minC},e:{r:maxR,c:maxC}});
+    });
+  }
+  // Sheet names differ between exports ("Sponsored Brands campaigns" vs "Campaigns", SBV on "SB Multi Ad Group Campaigns"):
+  // match case-insensitively, and read SB from BOTH sheets, counting each Campaign ID once.
+  function bulkSheetNames(wb, re) { return wb.SheetNames.filter(function(n){ return re.test(n); }); }
+
   // -- Process ---------------------------------------------------------------
   document.getElementById('processBtn').addEventListener('click', function() {
     showProg(10,'Reading Bulk...'); hideAlert();
@@ -706,9 +727,9 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
     setTimeout(function() {
       try {
         var sheetDefs = [
-          {name:'Sponsored Products Campaigns', label:'SP'},
-          {name:'Sponsored Brands campaigns',   label:'SB'},
-          {name:'Sponsored Display campaigns',  label:'SD'},
+          {re:/^sponsored products campaigns$/i,                        label:'SP'},
+          {re:/^(sponsored brands campaigns|sb multi ad group campaigns)$/i, label:'SB'},
+          {re:/^sponsored display campaigns$/i,                         label:'SD'},
         ];
 
         var totImp=0,totClk=0,totSpd=0,totSal=0,totOrd=0;
@@ -717,19 +738,25 @@ tbody tr:hover td{background:rgba(255,255,255,.02)}
 
         for (var si = 0; si < sheetDefs.length; si++) {
           var sd = sheetDefs[si];
-          if (bulkWB.SheetNames.indexOf(sd.name) === -1) continue;
+          var names = bulkSheetNames(bulkWB, sd.re);
+          if (!names.length) continue;
           showProg(20+si*15,'Reading '+sd.label+'...');
-          var rows = XLSX.utils.sheet_to_json(bulkWB.Sheets[sd.name], {raw:true,defval:''});
           var imp=0,clk=0,spd=0,sal=0,ord=0;
-          for (var ri = 0; ri < rows.length; ri++) {
-            var r = rows[ri];
-            if (String(r['Entity']||'').trim() !== 'Campaign') continue;
-            var rImp=cleanNum(r['Impressions']), rClk=cleanNum(r['Clicks']),
-                rSpd=cleanNum(r['Spend']), rSal=cleanNum(r['Sales']), rOrd=cleanNum(r['Orders']);
-            imp+=rImp; clk+=rClk; spd+=rSpd; sal+=rSal; ord+=rOrd;
-            var pname = String(r['Portfolio Name']||'').trim() || '(No Portfolio)';
-            if (!portMap[pname]) portMap[pname] = {name:pname, spend:0, ppcSales:0, orders:0, totalSales:0};
-            portMap[pname].spend += rSpd; portMap[pname].ppcSales += rSal; portMap[pname].orders += rOrd;
+          var seenCamp = {};      // an SB campaign is listed on both SB sheets: count it once
+          for (var ni = 0; ni < names.length; ni++) {
+            var rows = XLSX.utils.sheet_to_json(bulkWB.Sheets[names[ni]], {raw:true,defval:''});
+            for (var ri = 0; ri < rows.length; ri++) {
+              var r = rows[ri];
+              if (String(r['Entity']||'').trim() !== 'Campaign') continue;
+              var cid = String(r['Campaign ID']||'').trim();
+              if (cid) { if (seenCamp[cid]) continue; seenCamp[cid] = true; }
+              var rImp=cleanNum(r['Impressions']), rClk=cleanNum(r['Clicks']),
+                  rSpd=cleanNum(r['Spend']), rSal=cleanNum(r['Sales']), rOrd=cleanNum(r['Orders']);
+              imp+=rImp; clk+=rClk; spd+=rSpd; sal+=rSal; ord+=rOrd;
+              var pname = String(r['Portfolio Name']||r['Portfolio Name (Informational only)']||'').trim() || '(No Portfolio)';
+              if (!portMap[pname]) portMap[pname] = {name:pname, spend:0, ppcSales:0, orders:0, totalSales:0};
+              portMap[pname].spend += rSpd; portMap[pname].ppcSales += rSal; portMap[pname].orders += rOrd;
+            }
           }
           breakdown.push({label:sd.label,imp:imp,clk:clk,spd:spd,sal:sal,ord:ord});
           totImp+=imp; totClk+=clk; totSpd+=spd; totSal+=sal; totOrd+=ord;
